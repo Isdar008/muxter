@@ -1,0 +1,100 @@
+#!/bin/bash
+clear
+echo "=========================================="
+echo " 🚀 Telegram GitHub Bot Installer (Termux + PM2 Auto-Fix)"
+echo "=========================================="
+
+# Cek apakah sedang di Termux
+if [ "$(uname -o)" != "Android" ]; then
+    echo "⚠️ Script ini disarankan untuk dijalankan di Termux!"
+fi
+
+# Update dan install dependensi dasar
+echo "📦 Menginstall dependensi..."
+pkg update -y >/dev/null 2>&1
+pkg install -y nodejs-lts git wget curl >/dev/null 2>&1
+
+# Pastikan node & npm aktif
+if ! command -v node >/dev/null; then
+    echo "❌ Node.js gagal diinstal. Coba ulangi script ini."
+    exit 1
+fi
+
+if ! command -v npm >/dev/null; then
+    echo "❌ npm gagal diinstal. Coba ulangi script ini."
+    exit 1
+fi
+
+# Install PM2 secara global
+echo "🧩 Menginstall PM2 (auto restart bot)..."
+npm install -g pm2 >/dev/null 2>&1
+
+# Tambah PATH npm global agar pm2 dikenali
+NPM_GLOBAL_PATH=$(npm root -g)
+if [[ ":$PATH:" != *":$NPM_GLOBAL_PATH/pm2/bin:"* ]]; then
+    echo "🔧 Menambahkan PATH PM2 ke environment..."
+    echo "export PATH=\$PATH:$NPM_GLOBAL_PATH/pm2/bin" >> ~/.bashrc
+    export PATH=$PATH:$NPM_GLOBAL_PATH/pm2/bin
+fi
+
+# Verifikasi PM2
+if ! command -v pm2 >/dev/null; then
+    echo "❌ PM2 belum terdeteksi. Coba restart Termux lalu jalankan ulang."
+    exit 1
+fi
+
+# Input konfigurasi
+read -p "Masukkan BOT_TOKEN: " BOT_TOKEN
+read -p "Masukkan GITHUB_TOKEN: " GITHUB_TOKEN
+read -p "Masukkan GITHUB_USERNAME: " GITHUB_USERNAME
+read -p "Masukkan GITHUB_REPO: " GITHUB_REPO
+read -p "Masukkan GITHUB_FILE_PATH : " GITHUB_FILE_PATH
+read -p "Masukkan ADMIN_ID : " ADMIN_ID
+read -p "Masukkan DATA_QRIS (misal: link atau data file qris): " DATA_QRIS
+
+# Siapkan direktori bot
+BOTDIR=$HOME/botenv
+mkdir -p $BOTDIR
+cd $BOTDIR
+
+echo "📂 Menyiapkan environment di $BOTDIR..."
+npm init -y >/dev/null 2>&1
+npm install node-telegram-bot-api dotenv axios >/dev/null 2>&1
+
+# Unduh file bot.js
+echo "⬇️ Mengunduh bot.js..."
+wget -O $BOTDIR/bot.js "https://raw.githubusercontent.com/Isdar008/muxter/main/bot.js" -q
+
+# Buat file .env
+echo "🧾 Membuat file .env..."
+cat > $BOTDIR/.env <<EOF
+BOT_TOKEN=${BOT_TOKEN}
+GITHUB_TOKEN=${GITHUB_TOKEN}
+GITHUB_USERNAME=${GITHUB_USERNAME}
+GITHUB_REPO=${GITHUB_REPO}
+GITHUB_FILE_PATH=${GITHUB_FILE_PATH}
+ADMIN_ID=${ADMIN_ID}
+DATA_QRIS=${DATA_QRIS}
+EOF
+
+# Jalankan bot dengan PM2
+echo "🚀 Menjalankan bot dengan PM2..."
+pm2 delete githubbot >/dev/null 2>&1
+pm2 start $BOTDIR/bot.js --name githubbot --time >/dev/null 2>&1
+pm2 save >/dev/null 2>&1
+
+# Tambahkan auto-resurrect saat Termux dibuka
+if ! grep -q "pm2 resurrect" ~/.bashrc; then
+    echo "pm2 resurrect" >> ~/.bashrc
+fi
+
+echo ""
+echo "✅ Bot berhasil dijalankan & otomatis hidup tiap kali buka Termux!"
+echo ""
+echo "📋 Perintah penting:"
+echo "  ➤ Cek status bot   : pm2 status"
+echo "  ➤ Lihat log bot     : pm2 logs githubbot"
+echo "  ➤ Stop bot          : pm2 stop githubbot"
+echo "  ➤ Restart bot       : pm2 restart githubbot"
+echo ""
+echo "💡 Tips: Kalau Termux direstart, cukup buka ulang — bot akan otomatis aktif!"
