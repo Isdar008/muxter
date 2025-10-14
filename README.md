@@ -11,3 +11,8 @@ chmod +x uninstall
 ./uninstall
 ```
 cd ~/botenv
+
+# install ulang yang di butuhkan
+```
+npm install node-telegram-bot-api dotenv axios base-64
+```
