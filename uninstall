@@ -1,0 +1,34 @@
+#!/bin/bash
+clear
+echo "=========================================="
+echo " 🗑️ Telegram GitHub Bot Uninstaller (Termux)"
+echo "=========================================="
+
+# Stop & delete bot dari PM2
+echo "⏹️ Menghentikan bot dan menghapus dari PM2..."
+pm2 delete githubbot >/dev/null 2>&1
+pm2 save >/dev/null 2>&1
+
+# Hapus folder botenv
+BOTDIR=$HOME/botenv
+if [ -d "$BOTDIR" ]; then
+    echo "🗂️ Menghapus folder $BOTDIR..."
+    rm -rf "$BOTDIR"
+else
+    echo "⚠️ Folder $BOTDIR tidak ditemukan, lanjut..."
+fi
+
+# Hapus auto-resurrect di .bashrc
+echo "📝 Menghapus auto-start PM2 dari ~/.bashrc..."
+sed -i '/pm2 resurrect/d' ~/.bashrc
+
+# Opsional: hapus PM2 global
+read -p "🧹 Mau uninstall PM2 global juga? (y/n): " UNPM2
+if [[ "$UNPM2" == "y" || "$UNPM2" == "Y" ]]; then
+    echo "📦 Menghapus PM2 global..."
+    npm uninstall -g pm2
+fi
+
+echo ""
+echo "✅ Bot berhasil dihapus dari Termux!"
+echo "💡 Kalau mau install ulang, jalankan script installer baru."
