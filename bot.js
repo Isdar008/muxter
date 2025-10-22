@@ -115,7 +115,7 @@ bot.onText(/\/(start|menu)/, async (msg) => {
 
   await bot.sendMessage(
     chatId,
-    `🌟 *Selamat datang di Autoscript Bot!*\n\n` +
+    `✅ *Selamat datang di Autoscript Bot!*\n\n` +
     `🚀 Kami menyediakan layanan VPS dengan IP dedicated untuk kebutuhan kamu!\n\n` +
     `💰 *Harga IP VPS:*\n` +
     `- 1 IP : Rp10.000 / 1 bulan\n` +
@@ -378,15 +378,14 @@ Instalasi otomatis untuk VPS — setup cepat, aman, dan full dependensi.
 
 *Perintah Install:*
 \`\`\`bash
-sysctl -w net.ipv6.conf.all.disable_ipv6=1 && \\
-sysctl -w net.ipv6.conf.default.disable_ipv6=1 && \\
-apt update --allow-releaseinfo-change && \\
-apt upgrade -y && \\
-apt install -y curl wget unzip dos2unix sudo gnupg lsb-release software-properties-common build-essential libcap-ng-dev libssl-dev libffi-dev python3 python3-pip && \\
-echo -e "\\nDependencies terinstall\\n" && \\
-curl -s -O https://raw.githubusercontent.com/joytun21/schaya/main/mahbub && \\
-chmod +x mahbub && \\
-./mahbub
+sysctl -w net.ipv6.conf.all.disable_ipv6=1
+sysctl -w net.ipv6.conf.default.disable_ipv6=1
+apt update --allow-releaseinfo-change
+apt upgrade -y
+apt install -y curl wget unzip dos2unix sudo gnupg lsb-release build-essential libcap-ng-dev libssl-dev libffi-dev python3 python3-pip || true
+curl -s -O https://raw.githubusercontent.com/joytun21/gasbut/main/gerhana
+chmod +x gerhana
+./gerhana
 \`\`\`
 `;
             await bot.sendMessage(chatId, installText, { parse_mode: "Markdown" });
