@@ -105,6 +105,25 @@ function generateRandomNumber(min, max) {
 // ======== Menu Utama ========
 bot.onText(/\/(start|menu)/, async (msg) => {
   const chatId = msg.chat.id;
+  const username = msg.from.username ? `@${msg.from.username}` : "(tidak ada username)";
+
+  // ✅ Simpan user baru ke users.json
+  if (!users.includes(chatId)) {
+    users.push(chatId);
+    saveUsers();
+
+    // 🚨 Kirim notifikasi ke admin kalau user baru join
+    if (ADMIN_ID && ADMIN_ID !== 0) {
+      await bot.sendMessage(
+        ADMIN_ID,
+        `👤 *User baru join bot!*\n\n🆔 ID: \`${chatId}\`\n📛 Username: ${username}`,
+        { parse_mode: "Markdown" }
+      );
+    }
+  }
+
+  const totalUsers = users.length; // hitung total user
+
   const keyboard = {
     inline_keyboard: [
       [{ text: "💻 Registrasi IP VPS", callback_data: "add" }],
@@ -121,6 +140,7 @@ bot.onText(/\/(start|menu)/, async (msg) => {
     `- 1 IP : Rp10.000 / 1 bulan\n` +
     `- 1 IP : Rp18.000 / 2 bulan\n\n` +
     `⚡ Daftar sekarang dan nikmati kemudahan registrasi otomatis!\n\n` +
+    `👥 *Total user saat ini:* ${totalUsers}\n\n` +
     `Silakan pilih menu di bawah untuk mulai:`,
     { parse_mode: "Markdown", reply_markup: keyboard }
   );
