@@ -24,7 +24,7 @@ const DATA_QRIS = process.env.DATA_QRIS || "";
 global.depositState = {};
 const fs = require("fs");
 const path = require("path");
-
+const NEW_USERS_LOG = path.join(__dirname, "new_users.log");
 // Lokasi file penyimpanan
 const DEPOSIT_FILE = path.join(__dirname, "deposit_state.json");
 
@@ -117,15 +117,20 @@ function generateRandomNumber(min, max) {
 // ======== Menu Utama ========
 bot.onText(/\/(start|menu)/, async (msg) => {
   const chatId = msg.chat.id;
+  const username = msg.chat.username ? `@${msg.chat.username}` : "Tidak ada username";
+  const firstName = msg.chat.first_name || "Tanpa Nama";
 
-  // ✅ Simpan user baru ke users.json
-  if (!users.includes(chatId)) {
-    users.push(chatId);
+  // === Simpan user baru ke users.json ===
+  let isNewUser = false;
+  if (!users.find(u => u.id === chatId)) {
+    users.push({ id: chatId, username, name: firstName });
     saveUsers();
+    isNewUser = true;
   }
 
-  const totalUsers = users.length; // hitung total user
+  const totalUsers = users.length;
 
+  // === Tombol menu (4 tombol, 1 khusus admin) ===
   const keyboard = {
     inline_keyboard: [
       [{ text: "💻 Registrasi IP VPS", callback_data: "add" }],
@@ -133,6 +138,11 @@ bot.onText(/\/(start|menu)/, async (msg) => {
       [{ text: "🗑️ Hapus user", callback_data: "delete" }],
     ],
   };
+
+  // tombol admin tambahan
+  if (chatId === ADMIN_ID) {
+    keyboard.inline_keyboard.push([{ text: "👀 Lihat Username User", callback_data: "show_usernames" }]);
+  }
 
   await bot.sendMessage(
     chatId,
@@ -146,6 +156,24 @@ bot.onText(/\/(start|menu)/, async (msg) => {
     `Silakan pilih menu di bawah untuk mulai:`,
     { parse_mode: "Markdown", reply_markup: keyboard }
   );
+
+  // === Log user baru + kirim ke admin ===
+  if (isNewUser && ADMIN_ID) {
+    const now = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+    const logEntry = `[${now}] ${firstName} (${username}) - ID: ${chatId}\n`;
+
+    fs.appendFileSync(NEW_USERS_LOG, logEntry);
+
+    await bot.sendMessage(
+      ADMIN_ID,
+      `👤 *User Baru Mulai Bot!*\n\n` +
+      `🧩 *Nama:* ${firstName}\n` +
+      `📛 *Username:* ${username}\n` +
+      `🆔 *Chat ID:* \`${chatId}\`\n` +
+      `🕒 *Waktu:* ${now}`,
+      { parse_mode: "Markdown" }
+    );
+  }
 });
 
 // ======== Callback Handler ========
@@ -153,7 +181,63 @@ bot.on("callback_query", async (query) => {
   const data = query.data;
   const chatId = query.message.chat.id;
   const userId = query.from.id;
+   
+   if (query.data === "show_usernames") {
+  if (chatId !== ADMIN_ID) {
+    return bot.answerCallbackQuery(query.id, {
+      text: "🚫 Hanya admin yang bisa!",
+      show_alert: true,
+    });
+  }
 
+  if (users.length === 0) {
+    return bot.sendMessage(chatId, "🚫 Belum ada user yang start bot.");
+  }
+
+  // === 📋 Versi tabel polos (Markdown) ===
+  let table = "👥 *Daftar User Terdaftar*\n\n";
+  table += "```\n";
+  table += "No  | Username                 | Chat ID\n";
+  table += "----+--------------------------+----------------\n";
+
+  users.forEach((u, i) => {
+    const no = String(i + 1).padEnd(3, " ");
+    const uname = (u.username || "Tidak ada").padEnd(26, " ");
+    const id = String(u.id || "Unknown").padEnd(16, " ");
+    table += `${no}| ${uname}| ${id}\n`;
+  });
+
+  table += "```\n";
+
+  await bot.sendMessage(chatId, table, { parse_mode: "Markdown" });
+
+  // === 🧾 Versi HTML yang bisa diklik ===
+  const htmlList = users
+    .map(
+      (u, i) =>
+        `<b>${i + 1}.</b> ${u.username ? `<code>${u.username}</code>` : "<i>Tidak ada username</i>"} — <a href="tg://user?id=${u.id}">${u.id}</a>`
+    )
+    .join("\n");
+
+  await bot.sendMessage(chatId, `🔗 <b>Versi Klik Langsung ke Profil:</b>\n\n${htmlList}`, {
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  });
+
+  // === 📜 Tampilkan juga 10 log terakhir ===
+  if (fs.existsSync(NEW_USERS_LOG)) {
+    const logs = fs.readFileSync(NEW_USERS_LOG, "utf-8").trim().split("\n");
+    const lastLogs = logs.slice(-10).join("\n");
+
+    if (lastLogs) {
+      await bot.sendMessage(
+        chatId,
+        `🧾 *Log 10 User Terakhir:*\n\n\`\`\`\n${lastLogs}\n\`\`\``,
+        { parse_mode: "Markdown" }
+      );
+    }
+  }
+}
   // === Registrasi IP ===
   if (data === "add") {
     const username = randomUsername();
